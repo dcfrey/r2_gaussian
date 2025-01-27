@@ -1,0 +1,31 @@
+# Dataset (choose and copy data, specify geometry in config, 3D to 2D numpy projections)
+python data_generator/prep_npy.py data_generator/real_dataset/fatih_prep/sample01_marker/ -m amp df
+"""
+Note:
+- automatize generation of config from title, image data, and specs
+"""
+
+# Data Generation (training and test data sampling, meta data)
+python data_generator/real_dataset/generate_data_all.py --data data_generator/real_dataset/fatih_prep/sample01_marker/ --out data/real_dataset --n_train 2324 --n_t
+"""
+Note:
+    - set full stack as default perhaps - CHECK, not tested yet
+    - include copying of config to target location
+    - play around with settings, full-pixel stack
+"""
+
+# Initialization (FDK reconstruction)
+python data_generator/initialize_pcd_all.py --data data/real_dataset/cone_ntrain_2324_angle_360/
+"""
+Note:
+    - automatically copy fatihs recon data instead of creating vol_gt from FDK
+"""
+
+# Training
+python scripts/train_all.py -s data/real_dataset/cone_ntrain_2324_angle_360
+python train.py -s data/real_dataset/cone_ntrain_2324_angle_360/sample01_marker_amp_pre_11620/
+python train.py -s data/real_dataset/cone_ntrain_2324_angle_360/sample01_marker_df_pre_11620/
+"""
+Note:
+    - play around with hparams or do random search
+"""

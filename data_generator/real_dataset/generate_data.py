@@ -49,6 +49,10 @@ def main(args):
     angles = np.concatenate(
         [np.arange(angle_start, angle_last, angle_interval), [angle_last]]
     )
+    
+    # DF: Use for correct number of angles
+    if len(angles) != n_proj:
+        angles = np.linspace(angle_start, angle_last, n_proj)
     angles = angles / 180.0 * np.pi
 
     # Read and save projections
@@ -60,9 +64,14 @@ def main(args):
     os.makedirs(train_save_path, exist_ok=True)
     os.makedirs(test_save_path, exist_ok=True)
     proj_mat_paths = sorted(glob.glob(osp.join(input_data_path, "*.mat")))
+    
+    # DF: Load npy directly
+    if len(proj_mat_paths) == 0:
+        proj_mat_paths = sorted(glob.glob(osp.join(input_data_path, "*.npy")))
+    
     projection_train_list = []
     projection_test_list = []
-    train_ids = np.linspace(0, n_proj - 1, args.n_train).astype(int)
+    train_ids = np.linspace(0, n_proj - 1, args.n_train if args.n_train else n_proj).astype(int)
     test_ids = sorted(
         random.sample(np.setdiff1d(np.arange(n_proj), train_ids).tolist(), args.n_test)
     )
@@ -87,8 +96,13 @@ def main(args):
                     "angle": angles[i_proj],
                 }
             )
-
-        proj = scipy.io.loadmat(proj_mat_path)["img"] / proj_rescale * object_scale
+        
+        # DF: Load npy directly
+        try:
+            proj = scipy.io.loadmat(proj_mat_path)["img"] / proj_rescale * object_scale
+        except:
+            proj = np.load(proj_mat_path) / proj_rescale * object_scale
+        
         proj = proj.astype(np.float32)
         proj[proj < 0] = 0
         # Shift left for 5 pixels according to dataset description
@@ -140,8 +154,8 @@ def main(args):
         "accuracy": args.accuracy,
         "totalAngle": angle_last - angle_start,
         "startAngle": angle_start,
-        "noise": True,
-        "filter": None,
+        "noise": args.noise,
+        "filter": args.filter,
     }
 
     # Reconstruct with FDK as gt
@@ -165,7 +179,7 @@ def main(args):
     # Save
     meta_data = {
         "scanner": scanner_cfg,
-        "ct": "vol_gt.npy",
+        "vol": "vol_gt.npy",
         "radius": 1.0,
         "bbox": bbox,
         "proj_train": projection_train_list,
@@ -185,14 +199,17 @@ if __name__ == "__main__":
     parser.add_argument("--proj_subsample", default=4, type=int, help="subsample projections pixels")
     parser.add_argument("--proj_rescale", default=400.0, type=float, help="rescale projection values to fit density to around [0,1]")
     parser.add_argument("--object_scale", default=50, type=int, help="Rescale the whole scene to similar scales as the synthetic data")
-    parser.add_argument("--n_test", default=100, type=int, help="number of test")
-    parser.add_argument("--n_train", default=75, type=int, help="number of train")
+    parser.add_argument("--n_test", default=0, type=int, help="number of test")
+    parser.add_argument("--n_train", default=None, type=int, help="number of train, defaults to full dataset")
     
     parser.add_argument("--nVoxel", nargs="+", default=[256, 256, 256], type=int, help="voxel dimension")
     parser.add_argument("--sVoxel", nargs="+", default=[2.0, 2.0, 2.0], type=float, help="volume size")
     parser.add_argument("--offOrigin", nargs="+", default=[0.0, 0.0, 0.0], type=float, help="offOrigin")
     parser.add_argument("--offDetector", nargs="+", default=[0.0, 0.0], type=float, help="offDetector")
     parser.add_argument("--accuracy", default=0.5, type=float, help="accuracy")
+    
+    parser.add_argument("--noise", action="store_true")
+    parser.add_argument("--filter", default=None)
     
     
     args = parser.parse_args()

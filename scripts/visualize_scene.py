@@ -23,7 +23,7 @@ def main(dataset: ModelParams, args):
     scanner_cfg = scene.scanner_cfg
 
     vol_mesh = create_vol_mesh(
-        np.load(osp.join(dataset.source_path, "vol_gt.npy")),
+        np.load(osp.join(dataset.source_path, f"{args.volume_name}.npy")),
         np.array(scanner_cfg["offOrigin"]),
         np.array(scanner_cfg["dVoxel"]),
         np.eye(3),
@@ -50,7 +50,12 @@ def main(dataset: ModelParams, args):
     cmap = matplotlib.colormaps["viridis"]
     cam_scale = args.cam_scale
     n_proj = len(scene.train_cameras)
+    i_proj_step = n_proj // args.n_proj
+    
     for i_proj, camera in enumerate(scene.train_cameras):
+        if i_proj % i_proj_step != 0:
+            continue
+        
         proj_name = camera.image_name
         proj_id = i_proj
         proj = t2a(camera.original_image)[0]
@@ -88,6 +93,8 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Training script parameters")
     lp = ModelParams(parser)
     parser.add_argument("--mc_thresh", type=float, default=0.5, help="Threshold of marching cubes for mesh extraction from volume.")
-    parser.add_argument("--cam_scale", type=float, default=1.0, help="Size of camera model for visualization")
+    parser.add_argument("--cam_scale", type=float, default=30.0, help="Size of camera model for visualization")
+    parser.add_argument("--volume_name", "-v", default="vol_gt", help="File name of the volume")
+    parser.add_argument("--n_proj", "-n", type=int, default=100, help="Maximum number of projections to be visualized")
     args = parser.parse_args(sys.argv[1:])
     main(lp.extract(args), args)

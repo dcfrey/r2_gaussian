@@ -15,6 +15,8 @@ def main(args):
         raise ValueError("{} find no case!".format(input_case_paths))
 
     for input_case_path in input_case_paths:
+        n_proj_total = len(glob.glob(osp.join(input_case_path, "*.npy")))
+        args.n_train = args.n_train if args.n_train else n_proj_total
         output_case_path = osp.join(
             output_path,
             f"cone_ntrain_{args.n_train}_angle_360",
@@ -34,7 +36,9 @@ def main(args):
             + f"--sVoxel {args.sVoxel[0]} {args.sVoxel[1]} {args.sVoxel[2]} "
             + f"--offOrigin {args.offOrigin[0]} {args.offOrigin[1]} {args.offOrigin[2]} "
             + f"--offDetector {args.offDetector[0]} {args.offDetector[1]} "
-            + f"--accuracy {args.accuracy}"
+            + f"--accuracy {args.accuracy} "
+            + f"--noise "
+            + f"--filter {args.filter}"
         )
         os.system(cmd)
 
@@ -48,8 +52,8 @@ if __name__ == "__main__":
     parser.add_argument("--proj_subsample", default=4, type=int, help="subsample projections pixels")
     parser.add_argument("--proj_rescale", default=400.0, type=float, help="rescale projection values to fit density to around [0,1]")
     parser.add_argument("--object_scale", default=50, type=int, help="subsample number of views as sparse-view")
-    parser.add_argument("--n_test", default=100, type=int, help="number of test")
-    parser.add_argument("--n_train", default=75, type=int, help="number of train")
+    parser.add_argument("--n_test", default=0, type=int, help="number of test")
+    parser.add_argument("--n_train", default=None, type=int, help="number of train, defaults to full dataset")
     
     parser.add_argument("--nVoxel", nargs="+", default=[256, 256, 256], type=int, help="voxel dimension")
     parser.add_argument("--sVoxel", nargs="+", default=[2.0, 2.0, 2.0], type=float, help="volume size")
@@ -59,6 +63,9 @@ if __name__ == "__main__":
     
     parser.add_argument("--device", default=0, type=int, help="GPU device.")
     # fmt: on
+    
+    parser.add_argument("--noise", action="store_true")
+    parser.add_argument("--filter", default=None)
 
     args = parser.parse_args()
     main(args)
